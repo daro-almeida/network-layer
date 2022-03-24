@@ -1,18 +1,22 @@
-package pt.unl.fct.di.novasys.channel.relay.messaging;
+package pt.unl.fct.di.novasys.channel.proxy.messaging;
 
 import io.netty.buffer.ByteBuf;
 import pt.unl.fct.di.novasys.network.ISerializer;
+import pt.unl.fct.di.novasys.network.data.Host;
 
 import java.io.IOException;
 
-public abstract class RelayMessage<T>  {
+public abstract class ProxyMessage<T>  {
 
     public enum Type {
-        APP_MSG(0, RelayAppMessage.serializer),
-        CTRL(1, RelayControlMessage.serializer);
+        APP_MSG(0, ProxyAppMessage.serializer),
+        CONN_OPEN(1, ProxyConnectionOpenMessage.serializer),
+        CONN_CLOSE(2, ProxyConnectionCloseMessage.serializer),
+        CONN_ACCEPT(3, ProxyConnectionAcceptMessage.serializer),
+        CONN_FAIL(4, ProxyConnectionFailMessage.serializer);
 
         public final int opCode;
-        public final IRelaySerializer<RelayMessage> serializer;
+        public final IProxySerializer<ProxyMessage> serializer;
         private static final Type[] opcodeIdx;
 
         static {
@@ -27,7 +31,7 @@ public abstract class RelayMessage<T>  {
             }
         }
 
-        Type(int opCode, IRelaySerializer<RelayMessage> serializer){
+        Type(int opCode, IProxySerializer<ProxyMessage> serializer){
             this.opCode = opCode;
             this.serializer = serializer;
         }
@@ -42,17 +46,28 @@ public abstract class RelayMessage<T>  {
         }
     }
 
-    private Type type;
+    private final Type type;
+    protected Host from, to;
 
-    public RelayMessage(Type type){
+    public ProxyMessage(Host from, Host to, Type type){
         this.type = type;
+        this.from = from;
+        this.to = to;
     }
 
     public Type getType() {
         return type;
     }
 
-    public interface IRelaySerializer<T extends RelayMessage> {
+    public Host getFrom() {
+        return from;
+    }
+
+    public Host getTo() {
+        return to;
+    }
+
+    public interface IProxySerializer<T extends ProxyMessage> {
         void serialize(T msg, ByteBuf out, ISerializer innerSerializer) throws IOException;
         T deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException;
     }
