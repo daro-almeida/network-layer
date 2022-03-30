@@ -1,11 +1,10 @@
 package pt.unl.fct.di.novasys.channel.proxy;
 
-import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import pt.unl.fct.di.novasys.channel.ChannelListener;
-import pt.unl.fct.di.novasys.channel.base.SingleThreadedBiChannel;
+import pt.unl.fct.di.novasys.channel.base.SingleThreadedClientChannel;
 import pt.unl.fct.di.novasys.channel.proxy.messaging.*;
 import pt.unl.fct.di.novasys.channel.tcp.ConnectionState;
 import pt.unl.fct.di.novasys.channel.tcp.events.*;
@@ -22,7 +21,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 
-public class ProxyChannel<T> extends SingleThreadedBiChannel<T, ProxyMessage<T>> implements AttributeValidator {
+public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage<T>> implements AttributeValidator {
 
     private static final Logger logger = LogManager.getLogger(ProxyChannel.class);
     private static final short PROXY_MAGIC_NUMBER = 0x1369;
@@ -30,7 +29,6 @@ public class ProxyChannel<T> extends SingleThreadedBiChannel<T, ProxyMessage<T>>
     public final static String NAME = "PROXYChannel";
     public final static String ADDRESS_KEY = "address";
     public final static String PORT_KEY = "port";
-    public final static String WORKER_GROUP_KEY = "worker_group";
     public final static String TRIGGER_SENT_KEY = "trigger_sent";
     public final static String HEARTBEAT_INTERVAL_KEY = "heartbeat_interval";
     public final static String HEARTBEAT_TOLERANCE_KEY = "heartbeat_tolerance";
@@ -82,13 +80,8 @@ public class ProxyChannel<T> extends SingleThreadedBiChannel<T, ProxyMessage<T>>
         Host listenAddress = new Host(addr, port);
         self = listenAddress;
 
-        EventLoopGroup eventExecutors = properties.containsKey(WORKER_GROUP_KEY) ?
-                (EventLoopGroup) properties.get(WORKER_GROUP_KEY) :
-                NetworkManager.createNewWorkerGroup();
-
         ProxyMessageSerializer<T> tProxyMessageSerializer = new ProxyMessageSerializer<>(serializer);
         network = new NetworkManager<>(tProxyMessageSerializer, this, hbInterval, hbTolerance, connTimeout);
-        network.createServerSocket(this, listenAddress, this, eventExecutors);
 
         attributes = new Attributes();
         attributes.putShort(CHANNEL_MAGIC_ATTRIBUTE, PROXY_MAGIC_NUMBER);
@@ -254,32 +247,6 @@ public class ProxyChannel<T> extends SingleThreadedBiChannel<T, ProxyMessage<T>>
     }
 
     @Override
-    protected void onInboundConnectionUp(Connection<ProxyMessage<T>> con) {
-        //this event shouldn't happen
-        throw new AssertionError("Inbound connection on " + self);
-
-    }
-
-    @Override
-    protected void onInboundConnectionDown(Connection<ProxyMessage<T>> con, Throwable cause) {
-        //this event shouldn't happen
-        throw new AssertionError("Inbound connection on "+ self);
-    }
-
-    @Override
-    public void onServerSocketBind(boolean success, Throwable cause) {
-        if (success)
-            logger.debug("Server socket ready");
-        else
-            logger.error("Server socket bind failed: " + cause);
-    }
-
-    @Override
-    public void onServerSocketClose(boolean success, Throwable cause) {
-        logger.debug("Server socket closed. " + (success ? "" : "Cause: " + cause));
-    }
-
-    @Override
     public void onDeliverMessage(ProxyMessage<T> msg, Connection<ProxyMessage<T>> conn) {
 
         if(!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
@@ -384,6 +351,8 @@ public class ProxyChannel<T> extends SingleThreadedBiChannel<T, ProxyMessage<T>>
     }
 
     private void virtualOnInboundConnectionUp(Host peer) {
+        logger.debug("InboundConnectionUp " + peer);
+
         inConnections.add(peer);
         relayConnectionState.getConnection().sendMessage(new ProxyConnectionAcceptMessage<>(self, peer));
 

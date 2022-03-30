@@ -67,6 +67,13 @@ public abstract class ProxyMessage<T>  {
         return to;
     }
 
+    @Override
+    public String toString() {
+        return "type=" + type.name() +
+                ", from=" + from +
+                ", to=" + to;
+    }
+
     public interface IProxySerializer<T extends ProxyMessage> {
         void serialize(T msg, ByteBuf out, ISerializer innerSerializer) throws IOException;
         T deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException;
