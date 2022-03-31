@@ -32,23 +32,15 @@ public class ProxyAppMessage<T> extends ProxyMessage<T> {
             Host.serializer.serialize(msg.from, out);
             Host.serializer.serialize(msg.to, out);
 
-            if(innerSerializer != null)
-                innerSerializer.serialize(msg.payload, out);
-            else
-                out.writeBytes(SerializationUtils.serialize((Serializable) msg.payload));
+            innerSerializer.serialize(msg.payload, out);
         }
 
         @Override
         public ProxyAppMessage deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException {
-
             Host from = Host.serializer.deserialize(in);
             Host to = Host.serializer.deserialize(in);
 
-            Object payload;
-            if(innerSerializer != null)
-                payload = innerSerializer.deserialize(in);
-            else
-                payload = in.readBytes(in.readableBytes());
+            Object payload = innerSerializer.deserialize(in);
 
             return new ProxyAppMessage(from, to, payload);
         }
