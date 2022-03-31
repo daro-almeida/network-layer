@@ -333,8 +333,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
     }
 
     private void virtualOnOutboundConnectionUp(Host peer) {
-        listener.deliverEvent(new OutConnectionUp(peer));
-
         logger.debug("OutboundConnectionUp " + peer);
         VirtualConnectionState<ProxyMessage<T>> conState = outConnections.get(peer);
         if (conState == null) {
