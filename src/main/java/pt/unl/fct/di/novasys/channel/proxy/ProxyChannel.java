@@ -180,6 +180,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
     protected void onOutboundConnectionUp(Connection<ProxyMessage<T>> conn) {
         //connected to assigned relay, not sending this event to listener
         logger.debug("Connected to relay");
+
         if(!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
             throw new AssertionError("ConnectionUp not with assigned relay");
 
@@ -200,19 +201,31 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
     @Override
     protected void onCloseConnection(Host peer, int connection) {
-        logger.debug("CloseConnection " + peer);
-        VirtualConnectionState<ProxyMessage<T>> conState = outConnections.get(peer);
-        if (conState != null) {
-            if (conState.getState() == VirtualConnectionState.State.CONNECTED || conState.getState() == VirtualConnectionState.State.CONNECTING
-                    || conState.getState() == VirtualConnectionState.State.DISCONNECTING_RECONNECT) {
-                if(relayConnectionState.getState() == ConnectionState.State.CONNECTED)
-                    relayConnectionState.getConnection().sendMessage(new ProxyConnectionCloseMessage<>(self,peer,new Throwable("Connection closed.")));
-                else
-                    relayConnectionState.getQueue().add(new ProxyConnectionOpenMessage<>(self,peer));
-                conState.setState(VirtualConnectionState.State.DISCONNECTING);
-                conState.getQueue().clear();
-            }
-        }
+        logger.debug("CloseConnection " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
+
+        if (connection <= CONNECTION_OUT) {
+            VirtualConnectionState<ProxyMessage<T>> conState = outConnections.get(peer);
+            if (conState != null) {
+                if (conState.getState() == VirtualConnectionState.State.CONNECTED || conState.getState() == VirtualConnectionState.State.CONNECTING
+                        || conState.getState() == VirtualConnectionState.State.DISCONNECTING_RECONNECT) {
+                    if (relayConnectionState.getState() == ConnectionState.State.CONNECTED)
+                        relayConnectionState.getConnection().sendMessage(new ProxyConnectionCloseMessage<>(self, peer, new Throwable("Connection closed.")));
+                    else
+                        relayConnectionState.getQueue().add(new ProxyConnectionOpenMessage<>(self, peer));
+                    conState.setState(VirtualConnectionState.State.DISCONNECTING);
+                    conState.getQueue().clear();
+                }
+            } else
+                logger.error("No outgoing connection");
+        } else if (connection == CONNECTION_IN) {
+            boolean hasConnection = inConnections.contains(peer);
+            if (hasConnection)
+                inConnections.remove(peer);
+            else
+                logger.error("No incoming connection");
+        } else
+            logger.error("Invalid closeConnection mode " + connection);
+
     }
 
     @Override
