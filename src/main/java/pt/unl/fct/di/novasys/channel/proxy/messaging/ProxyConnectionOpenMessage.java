@@ -24,7 +24,7 @@ public class ProxyConnectionOpenMessage<T> extends ProxyMessage<T> {
             Host from = Host.serializer.deserialize(in);
             Host to = Host.serializer.deserialize(in);
             
-            return new ProxyConnectionOpenMessage(from, to);
+            return new ProxyConnectionOpenMessage<>(from, to);
         }
     };
 }

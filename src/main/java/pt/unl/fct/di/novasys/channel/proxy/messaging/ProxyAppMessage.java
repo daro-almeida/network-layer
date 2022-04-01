@@ -3,10 +3,8 @@ package pt.unl.fct.di.novasys.channel.proxy.messaging;
 import io.netty.buffer.ByteBuf;
 import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.data.Host;
-import org.apache.commons.lang3.SerializationUtils;
 
 import java.io.IOException;
-import java.io.Serializable;
 
 public class ProxyAppMessage<T> extends ProxyMessage<T> {
     private final T payload;
@@ -42,7 +40,7 @@ public class ProxyAppMessage<T> extends ProxyMessage<T> {
 
             Object payload = innerSerializer.deserialize(in);
 
-            return new ProxyAppMessage(from, to, payload);
+            return new ProxyAppMessage<>(from, to, payload);
         }
     };
 }

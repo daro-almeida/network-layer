@@ -298,7 +298,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             if (conState.getState() == VirtualConnectionState.State.CONNECTING)
                 listener.deliverEvent(new OutConnectionFailed<>(peer, conState.getQueue(), cause));
             else if (conState.getState() == VirtualConnectionState.State.DISCONNECTING_RECONNECT) {
-                outConnections.put(peer, new VirtualConnectionState<>());
+                outConnections.put(peer, new VirtualConnectionState<>(conState.getQueue()));
                 relayConnectionState.getConnection().sendMessage(new ProxyConnectionOpenMessage<>(self, peer));
             }
             else if (conState.getState() == VirtualConnectionState.State.CONNECTED)
@@ -318,7 +318,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             } else if (conState.getState() == VirtualConnectionState.State.CONNECTED) {
                 listener.deliverEvent(new OutConnectionDown(peer, cause));
             } else if (conState.getState() == VirtualConnectionState.State.DISCONNECTING_RECONNECT) {
-                outConnections.put(peer, new VirtualConnectionState<>());
+                outConnections.put(peer, new VirtualConnectionState<>(conState.getQueue()));
                 relayConnectionState.getConnection().sendMessage(new ProxyConnectionOpenMessage<>(self, peer));
             }
         }

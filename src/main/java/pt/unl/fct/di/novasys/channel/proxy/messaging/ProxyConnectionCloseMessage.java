@@ -8,10 +8,10 @@ import java.io.IOException;
 
 public class ProxyConnectionCloseMessage<T> extends ProxyMessage<T> {
 
-    private Throwable cause;
+    private final Throwable cause;
 
     public ProxyConnectionCloseMessage(Host from, Host to, Throwable cause) {
-        super(from, to, Type.CONN_FAIL);
+        super(from, to, Type.CONN_CLOSE);
 
         this.cause = cause;
     }
@@ -25,7 +25,8 @@ public class ProxyConnectionCloseMessage<T> extends ProxyMessage<T> {
         public void serialize(ProxyConnectionCloseMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
             Host.serializer.serialize(msg.from, out);
             Host.serializer.serialize(msg.to, out);
-            out.writeInt(msg.cause.getMessage().length());
+
+            out.writeInt(msg.cause.getMessage().getBytes().length);
             out.writeBytes(msg.cause.getMessage().getBytes());
         }
 
@@ -33,8 +34,11 @@ public class ProxyConnectionCloseMessage<T> extends ProxyMessage<T> {
         public ProxyConnectionCloseMessage deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException {
             Host from = Host.serializer.deserialize(in);
             Host to = Host.serializer.deserialize(in);
+
             int size = in.readInt();
-            String message = String.valueOf(in.readBytes(size));
+            byte[] strBytes = new byte[size];
+            in.readBytes(strBytes);
+            String message = new String(strBytes);
 
             return new ProxyConnectionCloseMessage<>(from, to, new Throwable(message));
         }
