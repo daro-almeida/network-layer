@@ -208,9 +208,9 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             if (conState.getState() == VirtualConnectionState.State.CONNECTED || conState.getState() == VirtualConnectionState.State.CONNECTING
                     || conState.getState() == VirtualConnectionState.State.DISCONNECTING_RECONNECT) {
                 if (relayConnectionState.getState() == ConnectionState.State.CONNECTED)
-                    relayConnectionState.getConnection().sendMessage(new ProxyConnectionCloseMessage<>(self, peer, new Throwable("Connection closed.")));
+                    relayConnectionState.getConnection().sendMessage(new ProxyConnectionCloseMessage<>(self, peer, new Throwable("Connection closed by "+self)));
                 else
-                    relayConnectionState.getQueue().add(new ProxyConnectionOpenMessage<>(self, peer));
+                    relayConnectionState.getQueue().add(new ProxyConnectionCloseMessage<>(self, peer, new Throwable("Connection closed by "+self)));
                 conState.setState(VirtualConnectionState.State.DISCONNECTING);
                 conState.getQueue().clear();
             }

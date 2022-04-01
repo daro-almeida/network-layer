@@ -30,7 +30,18 @@ public class ProxyAppMessage<T> extends ProxyMessage<T> {
             Host.serializer.serialize(msg.from, out);
             Host.serializer.serialize(msg.to, out);
 
+            int sizeIndex = out.writerIndex();
+            out.writeInt(-1);
+
+            int startIndex = out.writerIndex();
+
             innerSerializer.serialize(msg.payload, out);
+
+            int serializedSize = out.writerIndex() - startIndex;
+            out.markWriterIndex();
+            out.writerIndex(sizeIndex);
+            out.writeInt(serializedSize);
+            out.resetWriterIndex();
         }
 
         @Override
