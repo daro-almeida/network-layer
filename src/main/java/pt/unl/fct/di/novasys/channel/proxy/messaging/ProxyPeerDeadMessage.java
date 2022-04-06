@@ -11,7 +11,7 @@ public class ProxyPeerDeadMessage<T> extends ProxyMessage<T> {
     private final Throwable cause;
 
     public ProxyPeerDeadMessage(Host from, Host to, Throwable cause) {
-        super(from, to, Type.CONN_CLOSE);
+        super(from, to, Type.PEER_DEAD);
 
         this.cause = cause;
     }
