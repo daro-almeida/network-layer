@@ -13,7 +13,8 @@ public abstract class ProxyMessage<T>  {
         CONN_OPEN(1, ProxyConnectionOpenMessage.serializer),
         CONN_CLOSE(2, ProxyConnectionCloseMessage.serializer),
         CONN_ACCEPT(3, ProxyConnectionAcceptMessage.serializer),
-        CONN_FAIL(4, ProxyConnectionFailMessage.serializer);
+        CONN_FAIL(4, ProxyConnectionFailMessage.serializer),
+        PEER_DEAD(5, ProxyPeerDeadMessage.serializer);
 
         public final int opCode;
         public final IProxySerializer<ProxyMessage> serializer;

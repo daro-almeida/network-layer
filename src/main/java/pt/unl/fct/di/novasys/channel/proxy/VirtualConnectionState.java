@@ -8,7 +8,7 @@ import java.util.Queue;
  */
 public class VirtualConnectionState<T> {
 
-    public enum State {CONNECTING, CONNECTED, DISCONNECTING, DISCONNECTING_RECONNECT}
+    public enum State {CONNECTING, CONNECTED}
 
     private State state;
     private final Queue<T> queue;
