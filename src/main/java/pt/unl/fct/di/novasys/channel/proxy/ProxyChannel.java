@@ -211,33 +211,18 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
     @Override
     protected void onOutboundConnectionDown(Connection<ProxyMessage<T>> conn, Throwable cause) {
-        //connection to relay down, should try to reconnect immediately
-        logger.debug("Connection down with relay"  + (cause != null ? (" " + cause) : ""));
-
         if(!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
             throw new AssertionError("ConnectionDown not with assigned relay");
-        else {
-            if (relayConnectionState.getState() == ConnectionState.State.CONNECTING) {
-                throw new AssertionError("ConnectionDown to relay in CONNECTING state: " + conn);
-            } else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED || relayConnectionState.getState() == ConnectionState.State.DISCONNECTING_RECONNECT) {
-                this.relayConnectionState = new ConnectionState<>(network.createConnection(conn.getPeer(), attributes, this));
-            }
-        }
+        else
+            logger.error("Connection to relay down unexpectedly"  + (cause != null ? (" " + cause) : ""));
     }
 
     @Override
     protected void onOutboundConnectionFailed(Connection<ProxyMessage<T>> conn, Throwable cause) {
-        //connection failed with relay, in theory shouldn't happen if relay is up, try to reconnect immediately
-        logger.debug("Connection failed with relay" + (cause != null ? (" " + cause) : ""));
-
         if(!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
             throw new AssertionError("ConnectionFailed not with assigned relay");
-        else {
-            if (relayConnectionState.getState() == ConnectionState.State.DISCONNECTING_RECONNECT || relayConnectionState.getState() == ConnectionState.State.CONNECTING)
-                this.relayConnectionState = new ConnectionState<>(network.createConnection(conn.getPeer(), attributes, this));
-            else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED)
-                throw new AssertionError("ConnectionFailed to relay in state: " + relayConnectionState.getState() + " - " + conn);
-        }
+        else
+            logger.error("Connection to relay down unexpectedly"  + (cause != null ? (" " + cause) : ""));
     }
 
     @Override
