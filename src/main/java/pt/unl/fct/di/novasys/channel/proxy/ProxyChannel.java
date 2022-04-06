@@ -247,7 +247,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             case PEER_DEAD: {
                 VirtualConnectionState<ProxyMessage<T>> conState = outConnections.remove(peer);
                 if(conState != null) {
-                    Throwable cause = ((ProxyConnectionFailMessage<T>) msg).getCause();
+                    Throwable cause = ((ProxyPeerDeadMessage<T>) msg).getCause();
                     switch (conState.getState()) {
                         case CONNECTING:
                             logger.debug("OutboundConnectionFailed " + peer + (cause != null ? (" " + cause) : ""));
