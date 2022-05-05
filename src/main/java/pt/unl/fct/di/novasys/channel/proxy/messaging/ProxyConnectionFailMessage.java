@@ -39,7 +39,7 @@ public class ProxyConnectionFailMessage<T> extends ProxyMessage<T> {
             in.readBytes(strBytes);
             String message = new String(strBytes);
 
-            return new ProxyConnectionFailMessage<>(from, to, new Throwable(message));
+            return new ProxyConnectionFailMessage<>(from, to, new IOException(message));
         }
     };
 }

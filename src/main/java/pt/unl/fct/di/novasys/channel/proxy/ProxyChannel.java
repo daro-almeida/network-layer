@@ -54,8 +54,10 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
     private final Attributes attributes;
     private final Host self;
 
-    private final Set<Host> inConnections;
-    private final Map<Host, VirtualConnectionState<ProxyMessage<T>>> outConnections;
+    private boolean disconnected;
+
+    private Set<Host> inConnections;
+    private Map<Host, VirtualConnectionState<ProxyMessage<T>>> outConnections;
 
     private ConnectionState<ProxyMessage<T>> relayConnectionState;
 
@@ -89,6 +91,8 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
         connectToRelay(properties);
 
+        disconnected = false;
+
         inConnections = new HashSet<>();
         outConnections = new HashMap<>();
     }
@@ -111,16 +115,21 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
     @Override
     protected void onOpenConnection(Host peer) {
+        if(disconnected) {
+            logger.debug(self+": onOpenConnection ignored because disconnected from network.");
+            return;
+        }
+
         VirtualConnectionState<ProxyMessage<T>> conState = outConnections.get(peer);
         if (conState == null) {
-            logger.debug("onOpenConnection creating connection to: " + peer);
+            logger.debug(self+": onOpenConnection creating connection to: " + peer);
             outConnections.put(peer, new VirtualConnectionState<>());
             if(relayConnectionState.getState() == ConnectionState.State.CONNECTED)
                 relayConnectionState.getConnection().sendMessage(new ProxyConnectionOpenMessage<>(self,peer));
             else
                 relayConnectionState.getQueue().add(new ProxyConnectionOpenMessage<>(self,peer));
         } else
-            logger.debug("onOpenConnection ignored: " + peer);
+            logger.debug(self+": onOpenConnection ignored: " + peer);
     }
 
     private void sendWithListener(ProxyAppMessage<T> msg, Host peer, Connection<ProxyMessage<T>> established) {
@@ -134,17 +143,21 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
     @Override
     protected void onSendMessage(T msg, Host peer, int connection) {
+        if(disconnected) {
+            logger.debug(self+": onSendMessage ignored because disconnected from network.");
+            return;
+        }
 
         ProxyAppMessage<T> appMsg = new ProxyAppMessage<>(self, peer, msg);
 
         if(relayConnectionState.getState() == ConnectionState.State.CONNECTING) {
             relayConnectionState.getQueue().add(appMsg);
-            logger.debug("sent message without connection established to relay : queueing message");
+            logger.debug(self+": sent message without connection established to relay : queueing message");
         }
         else if(relayConnectionState.getState() != ConnectionState.State.CONNECTED)
             throw new AssertionError("Not connected to relay");
 
-        logger.debug("SendMessage " + msg + " " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
+        logger.debug(self+": SendMessage " + msg + " " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
 
         if (connection <= CONNECTION_OUT) {
             VirtualConnectionState<ProxyMessage<T>> conState = outConnections.get(peer);
@@ -166,14 +179,14 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
                 listener.messageFailed(msg, peer, new IllegalArgumentException("No incoming connection"));
         } else {
             listener.messageFailed(msg, peer, new IllegalArgumentException("Invalid connection: " + connection));
-            logger.error("Invalid sendMessage mode " + connection);
+            logger.error(self+": Invalid sendMessage mode " + connection);
         }
     }
 
     @Override
     protected void onOutboundConnectionUp(Connection<ProxyMessage<T>> conn) {
         //connected to assigned relay, not sending this event to listener
-        logger.debug("Connected to relay");
+        logger.trace(self+": Connected to relay");
 
         if(!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
             throw new AssertionError("ConnectionUp not with assigned relay");
@@ -195,18 +208,23 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
     @Override
     protected void onCloseConnection(Host peer, int connection) {
-        logger.debug("CloseConnection " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
+        if(disconnected) {
+            logger.debug(self+": onCloseConnection ignored because disconnected from network.");
+            return;
+        }
+
+        logger.debug(self+": CloseConnection " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
 
         VirtualConnectionState<ProxyMessage<T>> conState = outConnections.remove(peer);
         if (conState != null) {
             if (relayConnectionState.getState() == ConnectionState.State.CONNECTED)
-                relayConnectionState.getConnection().sendMessage(new ProxyConnectionCloseMessage<>(self, peer, new Throwable("Connection closed by "+self)));
+                relayConnectionState.getConnection().sendMessage(new ProxyConnectionCloseMessage<>(self, peer, new IOException("Connection closed by "+self)));
             else
-                relayConnectionState.getQueue().add(new ProxyConnectionCloseMessage<>(self, peer, new Throwable("Connection closed by "+self)));
+                relayConnectionState.getQueue().add(new ProxyConnectionCloseMessage<>(self, peer, new IOException("Connection closed by "+self)));
 
-            listener.deliverEvent(new OutConnectionDown(peer,new Throwable("Connection closed.")));
+            listener.deliverEvent(new OutConnectionDown(peer,new IOException("Connection closed.")));
         } else
-            logger.error("No outgoing connection");
+            logger.error(self+": No outgoing connection");
     }
 
     @Override
@@ -214,7 +232,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
         if(!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
             throw new AssertionError("ConnectionDown not with assigned relay");
         else
-            logger.error("Connection to relay down unexpectedly"  + (cause != null ? (" " + cause) : ""));
+            logger.error(self+": Connection to relay down unexpectedly"  + (cause != null ? (" " + cause) : ""));
     }
 
     @Override
@@ -222,7 +240,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
         if(!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
             throw new AssertionError("ConnectionFailed not with assigned relay");
         else
-            logger.error("Connection to relay down unexpectedly"  + (cause != null ? (" " + cause) : ""));
+            logger.error(self+": Connection to relay down unexpectedly"  + (cause != null ? (" " + cause) : ""));
     }
 
     @Override
@@ -243,53 +261,74 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             case CONN_OPEN: virtualOnInboundConnectionUp(peer); break;
             case CONN_CLOSE: virtualOnInboundConnectionDown(peer, ((ProxyConnectionCloseMessage<T>) msg).getCause()); break;
             case CONN_ACCEPT: virtualOnOutboundConnectionUp(peer); break;
-            case CONN_FAIL: virtualOnOutboundConnectionFailed(peer ,((ProxyConnectionFailMessage<T>) msg).getCause());break;
-            case PEER_DEAD: {
-                VirtualConnectionState<ProxyMessage<T>> conState = outConnections.remove(peer);
-                if(conState != null) {
-                    Throwable cause = ((ProxyPeerDeadMessage<T>) msg).getCause();
-                    switch (conState.getState()) {
-                        case CONNECTING:
-                            logger.debug("OutboundConnectionFailed " + peer + (cause != null ? (" " + cause) : ""));
-                            listener.deliverEvent(new OutConnectionFailed<>(peer, conState.getQueue(), cause));
-                            break;
-                        case CONNECTED:
-                            logger.debug("OutboundConnectionDown " + peer + (cause != null ? (" " + cause) : ""));
-                            listener.deliverEvent(new OutConnectionDown(peer, cause));
-                            break;
-                    }
+            case CONN_FAIL: virtualOnOutboundConnectionFailed(peer ,((ProxyConnectionFailMessage<T>) msg).getCause()); break;
+            case PEER_DISCONNECTED: handlePeerDisconnected((ProxyPeerDisconnectedMessage<T>) msg, peer); break;
+
+        }
+    }
+
+    private void handlePeerDisconnected(ProxyPeerDisconnectedMessage<T> msg, Host peer) {
+        Throwable cause = msg.getCause();
+        if(peer.equals(self)) {
+            if(disconnected) { // signal to reconnect to network
+                disconnected = false;
+            } else { // disconnected from network
+                disconnected = true;
+
+                //not sure if deliver down events for every connection here
+
+                outConnections = new HashMap<>();
+                inConnections = new HashSet<>();
+            }
+        } else {
+            VirtualConnectionState<ProxyMessage<T>> conState = outConnections.remove(peer);
+            if (conState != null) {
+                switch (conState.getState()) {
+                    case CONNECTING:
+                        logger.debug(self + ": OutboundConnectionFailed " + peer + (cause != null ? (" " + cause) : ""));
+                        listener.deliverEvent(new OutConnectionFailed<>(peer, conState.getQueue(), cause));
+                        break;
+                    case CONNECTED:
+                        logger.debug(self + ": OutboundConnectionDown " + peer + (cause != null ? (" " + cause) : ""));
+                        listener.deliverEvent(new OutConnectionDown(peer, cause));
+                        break;
                 }
+            }
+
+            if (inConnections.contains(peer)) {
+                logger.debug(self + ": InboundConnectionDown " + peer + (cause != null ? (" " + cause) : ""));
+                listener.deliverEvent(new InConnectionDown(peer, cause));
             }
         }
     }
 
     private void virtualOnOutboundConnectionFailed(Host peer, Throwable cause) {
-        logger.debug("OutboundConnectionFailed " + peer + (cause != null ? (" " + cause) : ""));
+        logger.debug(self+": OutboundConnectionFailed " + peer + (cause != null ? (" " + cause) : ""));
 
         VirtualConnectionState<ProxyMessage<T>> conState = outConnections.remove(peer);
         if(conState == null)
-            throw new AssertionError("No connection in OutboundConnectionFailed: " + peer );
+            throw new AssertionError(self+": No connection in OutboundConnectionFailed: " + peer );
         listener.deliverEvent(new OutConnectionFailed<>(peer, conState.getQueue(), cause));
     }
 
     private void virtualOnInboundConnectionDown(Host peer, Throwable cause) {
         boolean hasConnection = inConnections.contains(peer);
         if (!hasConnection)
-            throw new AssertionError("No connections in InboundConnectionDown " + peer );
+            throw new AssertionError(self+": No connections in InboundConnectionDown " + peer );
 
-        logger.debug("InboundConnectionDown " + peer + (cause != null ? (" " + cause) : ""));
+        logger.debug(self+": InboundConnectionDown " + peer + (cause != null ? (" " + cause) : ""));
         inConnections.remove(peer);
 
         listener.deliverEvent(new InConnectionDown(peer, cause));
     }
 
     private void virtualOnOutboundConnectionUp(Host peer) {
-        logger.debug("OutboundConnectionUp " + peer);
+        logger.debug(self+": OutboundConnectionUp " + peer);
         VirtualConnectionState<ProxyMessage<T>> conState = outConnections.get(peer);
         if (conState == null) {
-            throw new AssertionError("ConnectionUp with no conState: " + self + "-" + peer);
+            throw new AssertionError(self+": ConnectionUp with no conState: " + self + "-" + peer);
         } else if (conState.getState() == VirtualConnectionState.State.CONNECTED) {
-            throw new AssertionError("ConnectionUp in CONNECTED state: " + self + "-" + peer);
+            throw new AssertionError(self+": ConnectionUp in CONNECTED state: " + self + "-" + peer);
         } else if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
             conState.setState(VirtualConnectionState.State.CONNECTED);
             conState.getQueue().forEach(m -> sendWithListener((ProxyAppMessage<T>) m, m.getTo(), relayConnectionState.getConnection()));
@@ -300,7 +339,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
     }
 
     private void virtualOnInboundConnectionUp(Host peer) {
-        logger.debug("InboundConnectionUp " + peer);
+        logger.debug(self+": InboundConnectionUp " + peer);
 
         inConnections.add(peer);
         relayConnectionState.getConnection().sendMessage(new ProxyConnectionAcceptMessage<>(self, peer));

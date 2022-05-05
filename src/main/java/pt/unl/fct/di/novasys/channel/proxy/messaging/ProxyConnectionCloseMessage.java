@@ -40,7 +40,7 @@ public class ProxyConnectionCloseMessage<T> extends ProxyMessage<T> {
             in.readBytes(strBytes);
             String message = new String(strBytes);
 
-            return new ProxyConnectionCloseMessage<>(from, to, new Throwable(message));
+            return new ProxyConnectionCloseMessage<>(from, to, new IOException(message));
         }
     };
 }
