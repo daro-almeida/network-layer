@@ -330,7 +330,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
         if (conState == null) {
             logger.debug(self+": got ACCEPT with no conState: " + self + "-" + peer);
         } else if (conState.getState() == VirtualConnectionState.State.CONNECTED) {
-            throw new AssertionError(self+": ConnectionUp in CONNECTED state: " + self + "-" + peer);
+            logger.debug(self+": got ACCEPT in CONNECTED state: " + self + "-" + peer);
         } else if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
             conState.setState(VirtualConnectionState.State.CONNECTED);
             conState.getQueue().forEach(m -> sendWithListener((ProxyAppMessage<T>) m, m.getTo(), relayConnectionState.getConnection()));
