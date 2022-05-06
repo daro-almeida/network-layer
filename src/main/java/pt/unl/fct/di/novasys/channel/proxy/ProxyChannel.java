@@ -136,7 +136,10 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
         Promise<Void> promise = loop.newPromise();
         promise.addListener(future -> {
             if (future.isSuccess() && triggerSent) listener.messageSent(msg.getPayload(), peer);
-            else if (!future.isSuccess()) listener.messageFailed(msg.getPayload(), peer, future.cause());
+            else if (!future.isSuccess()) {
+                loop.shutdownGracefully();
+                listener.messageFailed(msg.getPayload(), peer, future.cause());
+            };
         });
         established.sendMessage(msg, promise);
     }
