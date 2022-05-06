@@ -137,7 +137,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
         promise.addListener(future -> {
             if (future.isSuccess() && triggerSent) listener.messageSent(msg.getPayload(), peer);
             else if (!future.isSuccess()) {
-                loop.shutdownGracefully();
                 listener.messageFailed(msg.getPayload(), peer, future.cause());
             };
         });
@@ -329,7 +328,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
         logger.debug(self+": OutboundConnectionUp " + peer);
         VirtualConnectionState<ProxyMessage<T>> conState = outConnections.get(peer);
         if (conState == null) {
-            throw new AssertionError(self+": ConnectionUp with no conState: " + self + "-" + peer);
+            logger.debug(self+": got ACCEPT with no conState: " + self + "-" + peer);
         } else if (conState.getState() == VirtualConnectionState.State.CONNECTED) {
             throw new AssertionError(self+": ConnectionUp in CONNECTED state: " + self + "-" + peer);
         } else if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
