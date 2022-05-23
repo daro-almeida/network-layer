@@ -49,11 +49,14 @@ public abstract class ProxyMessage<T>  {
 
     private final Type type;
     protected Host from, to;
+    private static int seqNInc = 0;
+    protected int seqN;
 
     public ProxyMessage(Host from, Host to, Type type){
         this.type = type;
         this.from = from;
         this.to = to;
+        this.seqN = seqNInc++;
     }
 
     public Type getType() {

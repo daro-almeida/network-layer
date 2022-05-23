@@ -126,7 +126,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             outConnections.put(peer, new VirtualConnectionState<>());
             if(relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
                 relayConnectionState.getConnection().sendMessage(new ProxyConnectionOpenMessage<>(self, peer));
-                logger.debug("Sending message to "+peer+" from "+self);
             }
             else
                 relayConnectionState.getQueue().add(new ProxyConnectionOpenMessage<>(self,peer));
@@ -143,7 +142,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             }
         });
         established.sendMessage(msg, promise);
-        logger.debug("Sending message to "+peer+" from "+self);
     }
 
     @Override
@@ -206,7 +204,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
                     sendWithListener((ProxyAppMessage<T>) m, m.getTo(), relayConnectionState.getConnection());
                 else {
                     relayConnectionState.getConnection().sendMessage(m);
-                    logger.debug("Sending message to "+m.getTo()+" from "+self);
                 }
             });
             relayConnectionState.getQueue().clear();
@@ -226,7 +223,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
         if (conState != null) {
             if (relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
                 relayConnectionState.getConnection().sendMessage(new ProxyConnectionCloseMessage<>(self, peer, new IOException("Connection closed by " + self)));
-                logger.debug("Sending message to "+peer+" from "+self);
             }
             else
                 relayConnectionState.getQueue().add(new ProxyConnectionCloseMessage<>(self, peer, new IOException("Connection closed by "+self)));
@@ -264,8 +260,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
             throw new AssertionError("Inbound connection on "+ self);
         else
             peer = msg.getFrom();
-
-        logger.debug("Received message to "+self+" from "+peer);
 
         switch (msg.getType()) {
             case APP_MSG: handleAppMessage(((ProxyAppMessage<T>) msg).getPayload(), peer); break;
@@ -354,7 +348,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
         inConnections.add(peer);
         relayConnectionState.getConnection().sendMessage(new ProxyConnectionAcceptMessage<>(self, peer));
-        logger.debug("Sending message to "+peer+" from "+self);
 
         listener.deliverEvent(new InConnectionUp(peer));
     }

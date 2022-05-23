@@ -21,14 +21,14 @@ public class ProxyMessageSerializer<T> implements ISerializer<ProxyMessage<T>> {
     public void serialize(ProxyMessage<T> proxyMessage, ByteBuf out) throws IOException {
         out.writeInt(proxyMessage.getType().opCode);
         proxyMessage.getType().serializer.serialize(proxyMessage, out, innerSerializer);
-        logger.debug("Serialized message to "+proxyMessage.to+" from "+proxyMessage.from);
+        logger.debug("Serialized message "+proxyMessage.seqN+" to "+proxyMessage.to+" from "+proxyMessage.from);
     }
 
     @Override
     public ProxyMessage<T> deserialize(ByteBuf in) throws IOException {
         ProxyMessage.Type type = ProxyMessage.Type.fromOpcode(in.readInt());
         ProxyMessage<T> proxyMessage = type.serializer.deserialize(in, innerSerializer);
-        logger.debug("Deserialized message to "+proxyMessage.to+" from "+proxyMessage.from);
+        logger.debug("Deserialized message "+proxyMessage.seqN+" to "+proxyMessage.to+" from "+proxyMessage.from);
         return proxyMessage;
     }
 
