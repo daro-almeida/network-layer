@@ -53,10 +53,14 @@ public abstract class ProxyMessage<T>  {
     protected int seqN;
 
     public ProxyMessage(Host from, Host to, Type type){
+        this(seqNInc++, from, to, type);
+    }
+
+    protected ProxyMessage(int seqN, Host from, Host to, Type type) {
         this.type = type;
         this.from = from;
         this.to = to;
-        this.seqN = seqNInc++;
+        this.seqN = seqN;
     }
 
     public Type getType() {
@@ -79,7 +83,7 @@ public abstract class ProxyMessage<T>  {
     }
 
     public interface IProxySerializer<T extends ProxyMessage> {
-        void serialize(T msg, ByteBuf out, ISerializer innerSerializer) throws IOException;
-        T deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException;
+        void serialize(T msg,  ByteBuf out, ISerializer innerSerializer) throws IOException;
+        T deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException;
     }
 }

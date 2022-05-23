@@ -15,6 +15,12 @@ public class ProxyAppMessage<T> extends ProxyMessage<T> {
         this.payload = payload;
     }
 
+    protected ProxyAppMessage(int seqN, Host from, Host to, T payload) {
+        super(seqN,from,to,Type.APP_MSG);
+
+        this.payload = payload;
+    }
+
     public T getPayload() {
         return payload;
     }
@@ -27,9 +33,6 @@ public class ProxyAppMessage<T> extends ProxyMessage<T> {
     public static final IProxySerializer serializer = new IProxySerializer<ProxyAppMessage>() {
         @Override
         public void serialize(ProxyAppMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
-            Host.serializer.serialize(msg.from, out);
-            Host.serializer.serialize(msg.to, out);
-
             int sizeIndex = out.writerIndex();
             out.writeInt(-1);
 
@@ -45,13 +48,10 @@ public class ProxyAppMessage<T> extends ProxyMessage<T> {
         }
 
         @Override
-        public ProxyAppMessage deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException {
-            Host from = Host.serializer.deserialize(in);
-            Host to = Host.serializer.deserialize(in);
-
+        public ProxyAppMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
             Object payload = innerSerializer.deserialize(in);
 
-            return new ProxyAppMessage<>(from, to, payload);
+            return new ProxyAppMessage<>(seqN, from, to, payload);
         }
     };
 }

@@ -12,19 +12,19 @@ public class ProxyConnectionAcceptMessage<T> extends ProxyMessage<T> {
         super(from, to, Type.CONN_ACCEPT);
     }
 
+    protected ProxyConnectionAcceptMessage(int seqN, Host from, Host to) {
+        super(seqN, from, to, Type.CONN_ACCEPT);
+    }
+
     public static final IProxySerializer serializer = new IProxySerializer<ProxyConnectionAcceptMessage>() {
         @Override
         public void serialize(ProxyConnectionAcceptMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
-            Host.serializer.serialize(msg.from, out);
-            Host.serializer.serialize(msg.to, out);
+            //nothing to be done
         }
 
         @Override
-        public ProxyConnectionAcceptMessage deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException {
-            Host from = Host.serializer.deserialize(in);
-            Host to = Host.serializer.deserialize(in);
-
-            return new ProxyConnectionAcceptMessage(from, to);
+        public ProxyConnectionAcceptMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
+            return new ProxyConnectionAcceptMessage(seqN, from, to);
         }
     };
 }

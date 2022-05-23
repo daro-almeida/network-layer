@@ -12,19 +12,19 @@ public class ProxyConnectionOpenMessage<T> extends ProxyMessage<T> {
         super(from, to, Type.CONN_OPEN);
     }
 
+    public ProxyConnectionOpenMessage(int seqN, Host from, Host to) {
+        super(seqN, from, to, Type.CONN_OPEN);
+    }
+
     public static final IProxySerializer serializer = new IProxySerializer<ProxyConnectionOpenMessage>() {
         @Override
         public void serialize(ProxyConnectionOpenMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
-            Host.serializer.serialize(msg.from, out);
-            Host.serializer.serialize(msg.to, out);
+            //nothing to do here
         }
 
         @Override
-        public ProxyConnectionOpenMessage deserialize(ByteBuf in, ISerializer innerSerializer) throws IOException {
-            Host from = Host.serializer.deserialize(in);
-            Host to = Host.serializer.deserialize(in);
-            
-            return new ProxyConnectionOpenMessage<>(from, to);
+        public ProxyConnectionOpenMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
+            return new ProxyConnectionOpenMessage<>(seqN, from, to);
         }
     };
 }
