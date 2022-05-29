@@ -180,6 +180,13 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 			throw new AssertionError("ConnectionUp to relay in " + relayConnectionState.getState().name() + " state: " + conn);
 		} else {
 			relayConnectionState.setState(ConnectionState.State.CONNECTED);
+			relayConnectionState.getQueue().forEach(msg -> {
+				if (msg.getType() == ProxyMessage.Type.APP_MSG)
+					sendWithListener((ProxyAppMessage<T>) msg, msg.getTo());
+				else
+					sendMessage(msg.getTo(), msg);
+			});
+			relayConnectionState.getQueue().clear();
 		}
 	}
 
@@ -337,8 +344,11 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	private void sendMessage(Host peer, ProxyMessage msg) {
 		if (peer.equals(self))
 			onDeliverMessage(msg, relayConnectionState.getConnection());
-		else
+		else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
 			relayConnectionState.getConnection().sendMessage(msg);
+		} else {
+			relayConnectionState.getQueue().add(msg);
+		}
 	}
 
 	@Override
