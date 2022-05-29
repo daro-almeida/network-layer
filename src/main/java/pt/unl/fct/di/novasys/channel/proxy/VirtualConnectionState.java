@@ -8,30 +8,24 @@ import java.util.Queue;
  */
 public class VirtualConnectionState<T> {
 
-    public enum State {CONNECTING, CONNECTED}
+	private final Queue<T> queue;
+	private State state;
+	public VirtualConnectionState() {
+		this.state = State.CONNECTING;
+		this.queue = new LinkedList<>();
+	}
 
-    private State state;
-    private final Queue<T> queue;
+	public Queue<T> getQueue() {
+		return queue;
+	}
 
-    public VirtualConnectionState() {
-        this.state = State.CONNECTING;
-        this.queue = new LinkedList<>();
-    }
+	public State getState() {
+		return state;
+	}
 
-    public VirtualConnectionState(Queue<T> initialQueue) {
-        this.state = State.CONNECTING;
-        this.queue = new LinkedList<>(initialQueue);
-    }
+	public void setState(State state) {
+		this.state = state;
+	}
 
-    public Queue<T> getQueue() {
-        return queue;
-    }
-
-    public State getState() {
-        return state;
-    }
-
-    public void setState(State state) {
-        this.state = state;
-    }
+	public enum State {CONNECTING, CONNECTED}
 }

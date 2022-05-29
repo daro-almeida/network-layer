@@ -4,27 +4,26 @@ import io.netty.buffer.ByteBuf;
 import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.data.Host;
 
-import java.io.IOException;
+@SuppressWarnings("rawtypes")
+public class ProxyConnectionAcceptMessage extends ProxyMessage {
 
-public class ProxyConnectionAcceptMessage<T> extends ProxyMessage<T> {
+	public static final IProxySerializer serializer = new IProxySerializer<ProxyConnectionAcceptMessage>() {
+		@Override
+		public void serialize(ProxyConnectionAcceptMessage msg, ByteBuf out, ISerializer innerSerializer) {
+			//nothing to be done
+		}
 
-    public ProxyConnectionAcceptMessage(Host from, Host to) {
-        super(from, to, Type.CONN_ACCEPT);
-    }
+		@Override
+		public ProxyConnectionAcceptMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) {
+			return new ProxyConnectionAcceptMessage(seqN, from, to);
+		}
+	};
 
-    protected ProxyConnectionAcceptMessage(int seqN, Host from, Host to) {
-        super(seqN, from, to, Type.CONN_ACCEPT);
-    }
+	public ProxyConnectionAcceptMessage(Host from, Host to) {
+		super(from, to, Type.CONN_ACCEPT);
+	}
 
-    public static final IProxySerializer serializer = new IProxySerializer<ProxyConnectionAcceptMessage>() {
-        @Override
-        public void serialize(ProxyConnectionAcceptMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
-            //nothing to be done
-        }
-
-        @Override
-        public ProxyConnectionAcceptMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
-            return new ProxyConnectionAcceptMessage(seqN, from, to);
-        }
-    };
+	protected ProxyConnectionAcceptMessage(int seqN, Host from, Host to) {
+		super(seqN, from, to, Type.CONN_ACCEPT);
+	}
 }

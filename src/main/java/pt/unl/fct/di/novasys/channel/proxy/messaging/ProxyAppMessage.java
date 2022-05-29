@@ -6,52 +6,54 @@ import pt.unl.fct.di.novasys.network.data.Host;
 
 import java.io.IOException;
 
-public class ProxyAppMessage<T> extends ProxyMessage<T> {
-    private final T payload;
+@SuppressWarnings("rawtypes")
+public class ProxyAppMessage<T> extends ProxyMessage {
+	public static final IProxySerializer serializer = new IProxySerializer<ProxyAppMessage>() {
+		@SuppressWarnings("unchecked")
+		@Override
+		public void serialize(ProxyAppMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
+			int sizeIndex = out.writerIndex();
+			out.writeInt(-1);
 
-    public ProxyAppMessage(Host from, Host to, T payload) {
-        super(from,to,Type.APP_MSG);
+			int startIndex = out.writerIndex();
 
-        this.payload = payload;
-    }
+			innerSerializer.serialize(msg.payload, out);
 
-    protected ProxyAppMessage(int seqN, Host from, Host to, T payload) {
-        super(seqN,from,to,Type.APP_MSG);
+			int serializedSize = out.writerIndex() - startIndex;
+			out.markWriterIndex();
+			out.writerIndex(sizeIndex);
+			out.writeInt(serializedSize);
+			out.resetWriterIndex();
+		}
 
-        this.payload = payload;
-    }
+		@Override
+		public ProxyAppMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
+			in.skipBytes(4);
+			Object content = innerSerializer.deserialize(in);
 
-    public T getPayload() {
-        return payload;
-    }
+			return new ProxyAppMessage<>(seqN, from, to, content);
+		}
+	};
+	private final T payload;
 
-    @Override
-    public String toString() {
-        return super.toString() + ", payload="+payload;
-    }
+	public ProxyAppMessage(Host from, Host to, T payload) {
+		super(from, to, Type.APP_MSG);
 
-    public static final IProxySerializer serializer = new IProxySerializer<ProxyAppMessage>() {
-        @Override
-        public void serialize(ProxyAppMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
-            int sizeIndex = out.writerIndex();
-            out.writeInt(-1);
+		this.payload = payload;
+	}
 
-            int startIndex = out.writerIndex();
+	protected ProxyAppMessage(int seqN, Host from, Host to, T payload) {
+		super(seqN, from, to, Type.APP_MSG);
 
-            innerSerializer.serialize(msg.payload, out);
+		this.payload = payload;
+	}
 
-            int serializedSize = out.writerIndex() - startIndex;
-            out.markWriterIndex();
-            out.writerIndex(sizeIndex);
-            out.writeInt(serializedSize);
-            out.resetWriterIndex();
-        }
+	public T getPayload() {
+		return payload;
+	}
 
-        @Override
-        public ProxyAppMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
-            Object payload = innerSerializer.deserialize(in);
-
-            return new ProxyAppMessage<>(seqN, from, to, payload);
-        }
-    };
+	@Override
+	public String toString() {
+		return super.toString() + ", payload=" + payload;
+	}
 }
