@@ -349,6 +349,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 			onDeliverMessage(msg, relayConnectionState.getConnection());
 		}
 		else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
+			logger.debug("Sending {} message {} to {} from {}", msg.getType().name(), msg.getSeqN(), msg.getTo(), msg.getFrom());
 			relayConnectionState.getConnection().sendMessage(msg);
 		} else {
 			relayConnectionState.getQueue().add(msg);
