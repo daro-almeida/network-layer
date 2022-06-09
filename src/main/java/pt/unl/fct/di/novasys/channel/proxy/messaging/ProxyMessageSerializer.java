@@ -10,9 +10,7 @@ import java.io.IOException;
 
 public class ProxyMessageSerializer<T> implements ISerializer<ProxyMessage> {
 
-	private static final Logger logger = LogManager.getLogger(ProxyMessageSerializer.class);
 	private final ISerializer<T> innerSerializer;
-
 	public ProxyMessageSerializer(ISerializer<T> innerSerializer) {
 		this.innerSerializer = innerSerializer;
 	}
@@ -24,7 +22,6 @@ public class ProxyMessageSerializer<T> implements ISerializer<ProxyMessage> {
 		Host.serializer.serialize(proxyMessage.from, out);
 		Host.serializer.serialize(proxyMessage.to, out);
 		proxyMessage.getType().serializer.serialize(proxyMessage, out, innerSerializer);
-		logger.debug("Serialized message " + proxyMessage.seqN + " to " + proxyMessage.to + " from " + proxyMessage.from);
 	}
 
 	@Override
@@ -33,9 +30,7 @@ public class ProxyMessageSerializer<T> implements ISerializer<ProxyMessage> {
 		int seqN = in.readInt();
 		Host from = Host.serializer.deserialize(in);
 		Host to = Host.serializer.deserialize(in);
-		ProxyMessage proxyMessage = type.serializer.deserialize(seqN, from, to, in, innerSerializer);
-		logger.debug("Deserialized message " + proxyMessage.seqN + " to " + proxyMessage.to + " from " + proxyMessage.from);
-		return proxyMessage;
+		return type.serializer.deserialize(seqN, from, to, in, innerSerializer);
 	}
 
 }

@@ -236,6 +236,8 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 		else
 			peer = msg.getFrom();
 
+		logger.debug("Received {} message {} to {} from {}", msg.getType().name(), msg.getSeqN(), msg.getTo(), msg.getFrom());
+
 		switch (msg.getType()) {
 			case APP_MSG:
 				handleAppMessage(((ProxyAppMessage<T>) msg).getPayload(), peer);
@@ -342,8 +344,10 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	private void sendMessage(Host peer, ProxyMessage msg) {
-		if (peer.equals(self))
+		if (peer.equals(self)) {
+			logger.debug("Sending {} message {} to {} from {}", msg.getType().name(), msg.getSeqN(), msg.getTo(), msg.getFrom());
 			onDeliverMessage(msg, relayConnectionState.getConnection());
+		}
 		else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
 			relayConnectionState.getConnection().sendMessage(msg);
 		} else {

@@ -36,6 +36,10 @@ public abstract class ProxyMessage {
 		return to;
 	}
 
+	public int getSeqN() {
+		return seqN;
+	}
+
 	@Override
 	public String toString() {
 		return "type=" + type.name() +
