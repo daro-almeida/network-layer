@@ -1,10 +1,11 @@
 package pt.unl.fct.di.novasys.channel.proxy;
 
+import io.netty.channel.DefaultEventLoop;
 import io.netty.util.concurrent.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import pt.unl.fct.di.novasys.channel.ChannelListener;
-import pt.unl.fct.di.novasys.channel.base.SingleThreadedClientChannel;
+import pt.unl.fct.di.novasys.channel.IChannel;
 import pt.unl.fct.di.novasys.channel.proxy.messaging.*;
 import pt.unl.fct.di.novasys.channel.tcp.ConnectionState;
 import pt.unl.fct.di.novasys.channel.tcp.events.*;
@@ -14,14 +15,17 @@ import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.NetworkManager;
 import pt.unl.fct.di.novasys.network.data.Attributes;
 import pt.unl.fct.di.novasys.network.data.Host;
+import pt.unl.fct.di.novasys.network.listeners.MessageListener;
+import pt.unl.fct.di.novasys.network.listeners.OutConnListener;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("unchecked")
-public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage> implements AttributeValidator {
+public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageListener<ProxyMessage>, IChannel<T>, AttributeValidator {
 
 	public static final String NAME = "PROXYChannel";
 	public static final String ADDRESS_KEY = "address";
@@ -54,7 +58,6 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	private ConnectionState<ProxyMessage> relayConnectionState;
 
 	public ProxyChannel(ISerializer<T> serializer, ChannelListener<T> list, Properties properties) throws IOException {
-		super("ProxyChannel");
 		this.listener = list;
 
 		InetAddress address;
@@ -83,8 +86,8 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 
 		disconnected = false;
 
-		inConnections = new HashSet<>();
-		outConnections = new HashMap<>();
+		inConnections = ConcurrentHashMap.newKeySet();
+		outConnections = new ConcurrentHashMap<>();
 	}
 
 	private void connectToRelay(Properties properties) throws UnknownHostException {
@@ -104,7 +107,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	@Override
-	protected void onOpenConnection(Host peer) {
+	public void openConnection(Host peer) {
 		if (disconnected) {
 			logger.trace(self + ": onOpenConnection ignored because disconnected from network.");
 			return;
@@ -122,7 +125,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	private void sendWithListener(ProxyAppMessage<T> msg, Host peer) {
-		Promise<Void> promise = loop.newPromise();
+		Promise<Void> promise = new DefaultEventLoop().newPromise();
 		promise.addListener(future -> {
 			if (future.isSuccess() && triggerSent) listener.messageSent(msg.getPayload(), peer);
 			else if (!future.isSuccess()) {
@@ -133,7 +136,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	@Override
-	protected void onSendMessage(T msg, Host peer, int connection) {
+	public void sendMessage(T msg, Host peer, int connection) {
 		if (disconnected) {
 			logger.trace(self + ": onSendMessage ignored because disconnected from network.");
 			return;
@@ -169,7 +172,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	@Override
-	protected void onOutboundConnectionUp(Connection<ProxyMessage> conn) {
+	public void outboundConnectionUp(Connection<ProxyMessage> conn) {
 		//connected to assigned relay, not sending this event to listener
 		logger.trace(self + ": Connected to relay");
 
@@ -191,7 +194,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	@Override
-	protected void onCloseConnection(Host peer, int connection) {
+	public void closeConnection(Host peer, int connection) {
 		if (disconnected) {
 			logger.trace(self + ": onCloseConnection ignored because disconnected from network.");
 			return;
@@ -208,7 +211,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	@Override
-	protected void onOutboundConnectionDown(Connection<ProxyMessage> conn, Throwable cause) {
+	public void outboundConnectionDown(Connection<ProxyMessage> conn, Throwable cause) {
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("ConnectionDown not with assigned relay");
 		else
@@ -216,7 +219,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	@Override
-	protected void onOutboundConnectionFailed(Connection<ProxyMessage> conn, Throwable cause) {
+	public void outboundConnectionFailed(Connection<ProxyMessage> conn, Throwable cause) {
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("ConnectionFailed not with assigned relay");
 		else
@@ -224,7 +227,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	}
 
 	@Override
-	public void onDeliverMessage(ProxyMessage msg, Connection<ProxyMessage> conn) {
+	public void deliverMessage(ProxyMessage msg, Connection<ProxyMessage> conn) {
 
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("onDeliverMessage not from relay");
@@ -346,7 +349,7 @@ public class ProxyChannel<T> extends SingleThreadedClientChannel<T, ProxyMessage
 	private void sendMessage(Host peer, ProxyMessage msg) {
 		if (peer.equals(self)) {
 			logger.debug("Sending {} message {} to {} from {}", msg.getType().name(), msg.getSeqN(), msg.getTo(), msg.getFrom());
-			onDeliverMessage(msg, relayConnectionState.getConnection());
+			deliverMessage(msg, relayConnectionState.getConnection());
 		}
 		else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
 			logger.debug("Sending {} message {} to {} from {}", msg.getType().name(), msg.getSeqN(), msg.getTo(), msg.getFrom());
