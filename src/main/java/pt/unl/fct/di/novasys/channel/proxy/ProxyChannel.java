@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("unchecked")
 public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageListener<ProxyMessage>, IChannel<T>, AttributeValidator {
@@ -46,6 +45,9 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	public static final int CONNECTION_IN = 1;
 	private static final Logger logger = LogManager.getLogger(ProxyChannel.class);
 	private static final short PROXY_MAGIC_NUMBER = 0x1369;
+	private static final int INITIAL_CAPACITY = 2000;
+
+
 	private final NetworkManager<ProxyMessage> network;
 	private final ChannelListener<T> listener;
 
@@ -86,12 +88,11 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 
 		disconnected = false;
 
-		inConnections = ConcurrentHashMap.newKeySet();
-		outConnections = new ConcurrentHashMap<>();
+		inConnections = new HashSet<>(INITIAL_CAPACITY);
+		outConnections = new HashMap<>(INITIAL_CAPACITY);
 	}
 
 	private void connectToRelay(Properties properties) throws UnknownHostException {
-		//only one relay
 		InetAddress relayAddress;
 		if (properties.containsKey(RELAY_ADDRESS_KEY))
 			relayAddress = InetAddress.getByName(properties.getProperty(RELAY_ADDRESS_KEY));
@@ -101,7 +102,6 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 
 		Host relay = new Host(relayAddress, relayPort);
 
-		//only one relay
 		this.relayConnectionState = new ConnectionState<>(network.createConnection(relay, attributes, this));
 
 	}
