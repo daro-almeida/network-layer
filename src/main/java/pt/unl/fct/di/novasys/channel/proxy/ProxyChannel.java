@@ -144,9 +144,6 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 
 		ProxyAppMessage<T> appMsg = new ProxyAppMessage<>(self, peer, msg);
 
-		if (relayConnectionState.getState() != ConnectionState.State.CONNECTED)
-			throw new AssertionError("Not connected to relay");
-
 		logger.trace(self + ": SendMessage " + msg + " " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
 
 		if (connection <= CONNECTION_OUT) {
