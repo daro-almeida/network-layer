@@ -1,4 +1,4 @@
-package pt.unl.fct.di.novasys.channel.proxy;
+package pt.unl.fct.di.novasys.channel.emulation;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.util.concurrent.Promise;
@@ -6,7 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import pt.unl.fct.di.novasys.channel.ChannelListener;
 import pt.unl.fct.di.novasys.channel.IChannel;
-import pt.unl.fct.di.novasys.channel.proxy.messaging.*;
+import pt.unl.fct.di.novasys.channel.emulation.messaging.*;
 import pt.unl.fct.di.novasys.channel.tcp.ConnectionState;
 import pt.unl.fct.di.novasys.channel.tcp.events.*;
 import pt.unl.fct.di.novasys.network.AttributeValidator;
@@ -24,9 +24,9 @@ import java.net.UnknownHostException;
 import java.util.*;
 
 @SuppressWarnings("unchecked")
-public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageListener<ProxyMessage>, IChannel<T>, AttributeValidator {
+public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, MessageListener<EmulatedMessage>, IChannel<T>, AttributeValidator {
 
-	public static final String NAME = "PROXYChannel";
+	public static final String NAME = "EmulatedChannel";
 	public static final String ADDRESS_KEY = "address";
 	public static final String PORT_KEY = "port";
 	public static final String TRIGGER_SENT_KEY = "trigger_sent";
@@ -43,12 +43,12 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	public static final String DEFAULT_CONNECT_TIMEOUT = "1000";
 	public static final int CONNECTION_OUT = 0;
 	public static final int CONNECTION_IN = 1;
-	private static final Logger logger = LogManager.getLogger(ProxyChannel.class);
-	private static final short PROXY_MAGIC_NUMBER = 0x1369;
+	private static final Logger logger = LogManager.getLogger(EmulatedChannel.class);
+	private static final short EMULATED_MAGIC_NUMBER = 0x1369;
 	private static final int INITIAL_CAPACITY = 2000;
 
 
-	private final NetworkManager<ProxyMessage> network;
+	private final NetworkManager<EmulatedMessage> network;
 	private final ChannelListener<T> listener;
 
 	private final Attributes attributes;
@@ -56,10 +56,10 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	private final boolean triggerSent;
 	private boolean disconnected;
 	private Set<Host> inConnections;
-	private Map<Host, VirtualConnectionState<ProxyMessage>> outConnections;
-	private ConnectionState<ProxyMessage> relayConnectionState;
+	private Map<Host, VirtualConnectionState<EmulatedMessage>> outConnections;
+	private ConnectionState<EmulatedMessage> relayConnectionState;
 
-	public ProxyChannel(ISerializer<T> serializer, ChannelListener<T> list, Properties properties) throws IOException {
+	public EmulatedChannel(ISerializer<T> serializer, ChannelListener<T> list, Properties properties) throws IOException {
 		this.listener = list;
 
 		InetAddress address;
@@ -77,11 +77,11 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 		Host listenAddress = new Host(address, port);
 		self = listenAddress;
 
-		ProxyMessageSerializer<T> tProxyMessageSerializer = new ProxyMessageSerializer<>(serializer);
-		network = new NetworkManager<>(tProxyMessageSerializer, this, hbInterval, hbTolerance, connTimeout);
+		EmulatedMessageSerializer<T> tEmulatedMessageSerializer = new EmulatedMessageSerializer<>(serializer);
+		network = new NetworkManager<>(tEmulatedMessageSerializer, this, hbInterval, hbTolerance, connTimeout);
 
 		attributes = new Attributes();
-		attributes.putShort(CHANNEL_MAGIC_ATTRIBUTE, PROXY_MAGIC_NUMBER);
+		attributes.putShort(CHANNEL_MAGIC_ATTRIBUTE, EMULATED_MAGIC_NUMBER);
 		attributes.putHost(LISTEN_ADDRESS_ATTRIBUTE, listenAddress);
 
 		connectToRelay(properties);
@@ -113,18 +113,18 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 			return;
 		}
 
-		VirtualConnectionState<ProxyMessage> conState = outConnections.get(peer);
+		VirtualConnectionState<EmulatedMessage> conState = outConnections.get(peer);
 		if (conState == null) {
 			logger.trace(self + ": onOpenConnection creating connection to: " + peer);
 			outConnections.put(peer, new VirtualConnectionState<>());
 
-			sendMessage(peer, new ProxyConnectionOpenMessage(self, peer));
+			sendMessage(peer, new EmulatedConnectionOpenMessage(self, peer));
 
 		} else
 			logger.trace(self + ": onOpenConnection ignored: " + peer);
 	}
 
-	private void sendWithListener(ProxyAppMessage<T> msg, Host peer) {
+	private void sendWithListener(EmulatedAppMessage<T> msg, Host peer) {
 		Promise<Void> promise = new DefaultEventLoop().newPromise();
 		promise.addListener(future -> {
 			if (future.isSuccess() && triggerSent) listener.messageSent(msg.getPayload(), peer);
@@ -142,18 +142,14 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 			return;
 		}
 
-		ProxyAppMessage<T> appMsg = new ProxyAppMessage<>(self, peer, msg);
+		EmulatedAppMessage<T> appMsg = new EmulatedAppMessage<>(self, peer, msg);
 
 		logger.trace(self + ": SendMessage " + msg + " " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
 
 		if (connection <= CONNECTION_OUT) {
-			VirtualConnectionState<ProxyMessage> conState = outConnections.get(peer);
+			VirtualConnectionState<EmulatedMessage> conState = outConnections.get(peer);
 			if (conState != null) {
-				if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
-					conState.getQueue().add(appMsg);
-				} else if (conState.getState() == VirtualConnectionState.State.CONNECTED) {
-					sendWithListener(appMsg, peer);
-				}
+				sendWithListener(appMsg, peer);
 			} else
 				listener.messageFailed(msg, peer, new IllegalArgumentException("No outgoing connection"));
 		} else if (connection == CONNECTION_IN) {
@@ -169,7 +165,7 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	}
 
 	@Override
-	public void outboundConnectionUp(Connection<ProxyMessage> conn) {
+	public void outboundConnectionUp(Connection<EmulatedMessage> conn) {
 		//connected to assigned relay, not sending this event to listener
 		logger.trace(self + ": Connected to relay");
 
@@ -181,8 +177,8 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 		} else {
 			relayConnectionState.setState(ConnectionState.State.CONNECTED);
 			relayConnectionState.getQueue().forEach(msg -> {
-				if (msg.getType() == ProxyMessage.Type.APP_MSG)
-					sendWithListener((ProxyAppMessage<T>) msg, msg.getTo());
+				if (msg.getType() == EmulatedMessage.Type.APP_MSG)
+					sendWithListener((EmulatedAppMessage<T>) msg, msg.getTo());
 				else
 					sendMessage(msg.getTo(), msg);
 			});
@@ -199,16 +195,16 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 
 		logger.trace(self + ": CloseConnection " + peer + " " + (connection == CONNECTION_IN ? "IN" : "OUT"));
 
-		VirtualConnectionState<ProxyMessage> conState = outConnections.remove(peer);
+		VirtualConnectionState<EmulatedMessage> conState = outConnections.remove(peer);
 		if (conState != null) {
-			sendMessage(peer, new ProxyConnectionCloseMessage(self, peer, new IOException("Connection closed by " + self)));
+			sendMessage(peer, new EmulatedConnectionCloseMessage(self, peer, new IOException("Connection closed by " + self)));
 			listener.deliverEvent(new OutConnectionDown(peer, new IOException("Connection closed.")));
 		} else
 			logger.error(self + ": No outgoing connection");
 	}
 
 	@Override
-	public void outboundConnectionDown(Connection<ProxyMessage> conn, Throwable cause) {
+	public void outboundConnectionDown(Connection<EmulatedMessage> conn, Throwable cause) {
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("ConnectionDown not with assigned relay");
 		else
@@ -216,7 +212,7 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	}
 
 	@Override
-	public void outboundConnectionFailed(Connection<ProxyMessage> conn, Throwable cause) {
+	public void outboundConnectionFailed(Connection<EmulatedMessage> conn, Throwable cause) {
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("ConnectionFailed not with assigned relay");
 		else
@@ -224,7 +220,7 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	}
 
 	@Override
-	public void deliverMessage(ProxyMessage msg, Connection<ProxyMessage> conn) {
+	public void deliverMessage(EmulatedMessage msg, Connection<EmulatedMessage> conn) {
 
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("onDeliverMessage not from relay");
@@ -240,28 +236,28 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 
 		switch (msg.getType()) {
 			case APP_MSG:
-				handleAppMessage(((ProxyAppMessage<T>) msg).getPayload(), peer);
+				handleAppMessage(((EmulatedAppMessage<T>) msg).getPayload(), peer);
 				break;
 			case CONN_OPEN:
 				virtualOnInboundConnectionUp(peer);
 				break;
 			case CONN_CLOSE:
-				virtualOnInboundConnectionDown(peer, ((ProxyConnectionCloseMessage) msg).getCause());
+				virtualOnInboundConnectionDown(peer, ((EmulatedConnectionCloseMessage) msg).getCause());
 				break;
 			case CONN_ACCEPT:
 				virtualOnOutboundConnectionUp(peer);
 				break;
 			case CONN_FAIL:
-				virtualOnOutboundConnectionFailed(peer, ((ProxyConnectionFailMessage) msg).getCause());
+				virtualOnOutboundConnectionFailed(peer, ((EmulatedConnectionFailMessage) msg).getCause());
 				break;
 			case PEER_DISCONNECTED:
-				handlePeerDisconnected((ProxyPeerDisconnectedMessage) msg, peer);
+				handlePeerDisconnected((EmulatedPeerDisconnectedMessage) msg, peer);
 				break;
 
 		}
 	}
 
-	private void handlePeerDisconnected(ProxyPeerDisconnectedMessage msg, Host peer) {
+	private void handlePeerDisconnected(EmulatedPeerDisconnectedMessage msg, Host peer) {
 		Throwable cause = msg.getCause();
 		if (peer.equals(self)) {
 			if (disconnected) { // signal to reconnect to network
@@ -275,7 +271,7 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 				inConnections = new HashSet<>();
 			}
 		} else {
-			VirtualConnectionState<ProxyMessage> conState = outConnections.remove(peer);
+			VirtualConnectionState<EmulatedMessage> conState = outConnections.remove(peer);
 			if (conState != null) {
 				if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
 					logger.trace(self + ": OutboundConnectionFailed " + peer + (cause != null ? (" " + cause) : ""));
@@ -296,7 +292,7 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	private void virtualOnOutboundConnectionFailed(Host peer, Throwable cause) {
 		logger.trace(self + ": OutboundConnectionFailed " + peer + (cause != null ? (" " + cause) : ""));
 
-		VirtualConnectionState<ProxyMessage> conState = outConnections.remove(peer);
+		VirtualConnectionState<EmulatedMessage> conState = outConnections.remove(peer);
 		if (conState == null)
 			throw new AssertionError(self + ": No connection in OutboundConnectionFailed: " + peer);
 		listener.deliverEvent(new OutConnectionFailed<>(peer, conState.getQueue(), cause));
@@ -315,15 +311,15 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 
 	private void virtualOnOutboundConnectionUp(Host peer) {
 		logger.trace(self + ": OutboundConnectionUp " + peer);
-		VirtualConnectionState<ProxyMessage> conState = outConnections.get(peer);
+		VirtualConnectionState<EmulatedMessage> conState = outConnections.get(peer);
 		if (conState == null) {
 			logger.trace(self + ": got ACCEPT with no conState: " + self + "-" + peer);
 		} else if (conState.getState() == VirtualConnectionState.State.CONNECTED) {
 			logger.trace(self + ": got ACCEPT in CONNECTED state: " + self + "-" + peer);
 		} else if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
 			conState.setState(VirtualConnectionState.State.CONNECTED);
-			conState.getQueue().forEach(m -> sendWithListener((ProxyAppMessage<T>) m, m.getTo()));
-			conState.getQueue().clear();
+			//conState.getQueue().forEach(m -> sendWithListener((EmulatedAppMessage<T>) m, m.getTo()));
+			//conState.getQueue().clear();
 
 			listener.deliverEvent(new OutConnectionUp(peer));
 		}
@@ -333,7 +329,7 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 		logger.trace(self + ": InboundConnectionUp " + peer);
 
 		inConnections.add(peer);
-		sendMessage(peer, new ProxyConnectionAcceptMessage(self, peer));
+		sendMessage(peer, new EmulatedConnectionAcceptMessage(self, peer));
 
 		listener.deliverEvent(new InConnectionUp(peer));
 	}
@@ -343,12 +339,11 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 			listener.deliverMessage(msg, from);
 	}
 
-	private void sendMessage(Host peer, ProxyMessage msg) {
+	private void sendMessage(Host peer, EmulatedMessage msg) {
 		if (peer.equals(self)) {
 			logger.debug("Sending {} message {} to {} from {}", msg.getType().name(), msg.getSeqN(), msg.getTo(), msg.getFrom());
 			deliverMessage(msg, relayConnectionState.getConnection());
-		}
-		else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
+		} else if (relayConnectionState.getState() == ConnectionState.State.CONNECTED) {
 			logger.debug("Sending {} message {} to {} from {}", msg.getType().name(), msg.getSeqN(), msg.getTo(), msg.getFrom());
 			relayConnectionState.getConnection().sendMessage(msg);
 		} else {
@@ -359,6 +354,6 @@ public class ProxyChannel<T> implements OutConnListener<ProxyMessage>, MessageLi
 	@Override
 	public boolean validateAttributes(Attributes attr) {
 		Short channel = attr.getShort(CHANNEL_MAGIC_ATTRIBUTE);
-		return channel != null && channel == PROXY_MAGIC_NUMBER;
+		return channel != null && channel == EMULATED_MAGIC_NUMBER;
 	}
 }

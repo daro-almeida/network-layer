@@ -1,4 +1,4 @@
-package pt.unl.fct.di.novasys.channel.proxy;
+package pt.unl.fct.di.novasys.channel.emulation;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -10,6 +10,7 @@ public class VirtualConnectionState<T> {
 
 	private final Queue<T> queue;
 	private State state;
+
 	public VirtualConnectionState() {
 		this.state = State.CONNECTING;
 		this.queue = new LinkedList<>();

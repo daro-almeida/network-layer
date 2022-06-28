@@ -1,4 +1,4 @@
-package pt.unl.fct.di.novasys.channel.proxy.messaging;
+package pt.unl.fct.di.novasys.channel.emulation.messaging;
 
 import io.netty.buffer.ByteBuf;
 import pt.unl.fct.di.novasys.network.ISerializer;
@@ -7,11 +7,11 @@ import pt.unl.fct.di.novasys.network.data.Host;
 import java.io.IOException;
 
 @SuppressWarnings("rawtypes")
-public class ProxyAppMessage<T> extends ProxyMessage {
-	public static final IProxySerializer serializer = new IProxySerializer<ProxyAppMessage>() {
+public class EmulatedAppMessage<T> extends EmulatedMessage {
+	public static final IEmulatedSerializer serializer = new IEmulatedSerializer<EmulatedAppMessage>() {
 		@SuppressWarnings("unchecked")
 		@Override
-		public void serialize(ProxyAppMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
+		public void serialize(EmulatedAppMessage msg, ByteBuf out, ISerializer innerSerializer) throws IOException {
 			int sizeIndex = out.writerIndex();
 			out.writeInt(-1);
 
@@ -27,22 +27,22 @@ public class ProxyAppMessage<T> extends ProxyMessage {
 		}
 
 		@Override
-		public ProxyAppMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
+		public EmulatedAppMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
 			in.skipBytes(4);
 			Object content = innerSerializer.deserialize(in);
 
-			return new ProxyAppMessage<>(seqN, from, to, content);
+			return new EmulatedAppMessage<>(seqN, from, to, content);
 		}
 	};
 	private final T payload;
 
-	public ProxyAppMessage(Host from, Host to, T payload) {
+	public EmulatedAppMessage(Host from, Host to, T payload) {
 		super(from, to, Type.APP_MSG);
 
 		this.payload = payload;
 	}
 
-	protected ProxyAppMessage(int seqN, Host from, Host to, T payload) {
+	protected EmulatedAppMessage(int seqN, Host from, Host to, T payload) {
 		super(seqN, from, to, Type.APP_MSG);
 
 		this.payload = payload;

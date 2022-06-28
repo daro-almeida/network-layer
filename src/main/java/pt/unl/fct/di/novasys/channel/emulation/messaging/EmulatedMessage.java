@@ -1,4 +1,4 @@
-package pt.unl.fct.di.novasys.channel.proxy.messaging;
+package pt.unl.fct.di.novasys.channel.emulation.messaging;
 
 import io.netty.buffer.ByteBuf;
 import pt.unl.fct.di.novasys.network.ISerializer;
@@ -6,18 +6,19 @@ import pt.unl.fct.di.novasys.network.data.Host;
 
 import java.io.IOException;
 
-public abstract class ProxyMessage {
+public abstract class EmulatedMessage {
 
 	private static int seqNInc = 0;
 	protected final Host from;
 	protected final Host to;
 	protected final int seqN;
 	private final Type type;
-	protected ProxyMessage(Host from, Host to, Type type) {
+
+	protected EmulatedMessage(Host from, Host to, Type type) {
 		this(seqNInc++, from, to, type);
 	}
 
-	protected ProxyMessage(int seqN, Host from, Host to, Type type) {
+	protected EmulatedMessage(int seqN, Host from, Host to, Type type) {
 		this.type = type;
 		this.from = from;
 		this.to = to;
@@ -48,12 +49,12 @@ public abstract class ProxyMessage {
 	}
 
 	public enum Type {
-		APP_MSG(0, ProxyAppMessage.serializer),
-		CONN_OPEN(1, ProxyConnectionOpenMessage.serializer),
-		CONN_CLOSE(2, ProxyConnectionCloseMessage.serializer),
-		CONN_ACCEPT(3, ProxyConnectionAcceptMessage.serializer),
-		CONN_FAIL(4, ProxyConnectionFailMessage.serializer),
-		PEER_DISCONNECTED(5, ProxyPeerDisconnectedMessage.serializer);
+		APP_MSG(0, EmulatedAppMessage.serializer),
+		CONN_OPEN(1, EmulatedConnectionOpenMessage.serializer),
+		CONN_CLOSE(2, EmulatedConnectionCloseMessage.serializer),
+		CONN_ACCEPT(3, EmulatedConnectionAcceptMessage.serializer),
+		CONN_FAIL(4, EmulatedConnectionFailMessage.serializer),
+		PEER_DISCONNECTED(5, EmulatedPeerDisconnectedMessage.serializer);
 
 		private static final Type[] opcodeIdx;
 
@@ -70,9 +71,9 @@ public abstract class ProxyMessage {
 		}
 
 		public final int opCode;
-		public final IProxySerializer<ProxyMessage> serializer;
+		public final IEmulatedSerializer<EmulatedMessage> serializer;
 
-		Type(int opCode, IProxySerializer<ProxyMessage> serializer) {
+		Type(int opCode, IEmulatedSerializer<EmulatedMessage> serializer) {
 			this.opCode = opCode;
 			this.serializer = serializer;
 		}
@@ -88,7 +89,7 @@ public abstract class ProxyMessage {
 	}
 
 	@SuppressWarnings("rawtypes")
-	public interface IProxySerializer<T extends ProxyMessage> {
+	public interface IEmulatedSerializer<T extends EmulatedMessage> {
 		void serialize(T msg, ByteBuf out, ISerializer innerSerializer) throws IOException;
 
 		T deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException;
