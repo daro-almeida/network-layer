@@ -43,17 +43,17 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 	public static final String DEFAULT_CONNECT_TIMEOUT = "1000";
 	public static final int CONNECTION_OUT = 0;
 	public static final int CONNECTION_IN = 1;
+
 	private static final Logger logger = LogManager.getLogger(EmulatedChannel.class);
 	private static final short EMULATED_MAGIC_NUMBER = 0x1369;
 	private static final int INITIAL_CAPACITY = 2000;
 
-
 	private final NetworkManager<EmulatedMessage> network;
 	private final ChannelListener<T> listener;
-
 	private final Attributes attributes;
 	private final Host self;
 	private final boolean triggerSent;
+
 	private boolean disconnected;
 	private Set<Host> inConnections;
 	private Map<Host, VirtualConnectionState<EmulatedMessage>> outConnections;
@@ -200,7 +200,7 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 			sendMessage(peer, new EmulatedConnectionCloseMessage(self, peer, new IOException("Connection closed by " + self)));
 			listener.deliverEvent(new OutConnectionDown(peer, new IOException("Connection closed.")));
 		} else
-			logger.error(self + ": No outgoing connection");
+			logger.warn(self + ": No outgoing connection");
 	}
 
 	@Override
@@ -208,7 +208,7 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("ConnectionDown not with assigned relay");
 		else
-			logger.error(self + ": Connection to relay down unexpectedly" + (cause != null ? (" " + cause) : ""));
+			logger.fatal(self + ": Connection to relay down unexpectedly" + (cause != null ? (" " + cause) : ""));
 	}
 
 	@Override
@@ -216,7 +216,7 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 		if (!conn.getPeer().equals(relayConnectionState.getConnection().getPeer()))
 			throw new AssertionError("ConnectionFailed not with assigned relay");
 		else
-			logger.error(self + ": Connection to relay down unexpectedly" + (cause != null ? (" " + cause) : ""));
+			logger.fatal(self + ": Connection to relay down unexpectedly" + (cause != null ? (" " + cause) : ""));
 	}
 
 	@Override
