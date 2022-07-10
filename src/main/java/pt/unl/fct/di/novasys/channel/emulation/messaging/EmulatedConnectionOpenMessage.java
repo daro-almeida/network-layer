@@ -14,8 +14,8 @@ public class EmulatedConnectionOpenMessage extends EmulatedMessage {
 		}
 
 		@Override
-		public EmulatedConnectionOpenMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) {
-			return new EmulatedConnectionOpenMessage(seqN, from, to);
+		public EmulatedConnectionOpenMessage deserialize(int seqN, Host from, Host to, long sentTime, ByteBuf in, ISerializer innerSerializer) {
+			return new EmulatedConnectionOpenMessage(seqN, from, to, sentTime);
 		}
 	};
 
@@ -23,7 +23,7 @@ public class EmulatedConnectionOpenMessage extends EmulatedMessage {
 		super(from, to, Type.CONN_OPEN);
 	}
 
-	public EmulatedConnectionOpenMessage(int seqN, Host from, Host to) {
-		super(seqN, from, to, Type.CONN_OPEN);
+	public EmulatedConnectionOpenMessage(int seqN, Host from, Host to, long sentTime) {
+		super(seqN, from, to, sentTime, Type.CONN_OPEN);
 	}
 }

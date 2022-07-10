@@ -17,13 +17,13 @@ public class EmulatedConnectionCloseMessage extends EmulatedMessage {
 		}
 
 		@Override
-		public EmulatedConnectionCloseMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) {
+		public EmulatedConnectionCloseMessage deserialize(int seqN, Host from, Host to, long sentTime, ByteBuf in, ISerializer innerSerializer) {
 			int size = in.readInt();
 			byte[] strBytes = new byte[size];
 			in.readBytes(strBytes);
 			String message = new String(strBytes);
 
-			return new EmulatedConnectionCloseMessage(seqN, from, to, new IOException(message));
+			return new EmulatedConnectionCloseMessage(seqN, from, to, sentTime, new IOException(message));
 		}
 	};
 	private final Throwable cause;
@@ -33,8 +33,8 @@ public class EmulatedConnectionCloseMessage extends EmulatedMessage {
 		this.cause = cause;
 	}
 
-	protected EmulatedConnectionCloseMessage(int seqN, Host from, Host to, Throwable cause) {
-		super(seqN, from, to, Type.CONN_CLOSE);
+	protected EmulatedConnectionCloseMessage(int seqN, Host from, Host to, long sentTime, Throwable cause) {
+		super(seqN, from, to, sentTime, Type.CONN_CLOSE);
 		this.cause = cause;
 	}
 

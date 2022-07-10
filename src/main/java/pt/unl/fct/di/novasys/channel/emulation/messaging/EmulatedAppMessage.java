@@ -27,11 +27,11 @@ public class EmulatedAppMessage<T> extends EmulatedMessage {
 		}
 
 		@Override
-		public EmulatedAppMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException {
+		public EmulatedAppMessage deserialize(int seqN, Host from, Host to, long sentTime, ByteBuf in, ISerializer innerSerializer) throws IOException {
 			in.skipBytes(4);
 			Object content = innerSerializer.deserialize(in);
 
-			return new EmulatedAppMessage<>(seqN, from, to, content);
+			return new EmulatedAppMessage<>(seqN, from, to, sentTime, content);
 		}
 	};
 	private final T payload;
@@ -42,8 +42,8 @@ public class EmulatedAppMessage<T> extends EmulatedMessage {
 		this.payload = payload;
 	}
 
-	protected EmulatedAppMessage(int seqN, Host from, Host to, T payload) {
-		super(seqN, from, to, Type.APP_MSG);
+	protected EmulatedAppMessage(int seqN, Host from, Host to, long sentTime, T payload) {
+		super(seqN, from, to, sentTime, Type.APP_MSG);
 
 		this.payload = payload;
 	}

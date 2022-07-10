@@ -14,8 +14,8 @@ public class EmulatedConnectionAcceptMessage extends EmulatedMessage {
 		}
 
 		@Override
-		public EmulatedConnectionAcceptMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) {
-			return new EmulatedConnectionAcceptMessage(seqN, from, to);
+		public EmulatedConnectionAcceptMessage deserialize(int seqN, Host from, Host to, long sentTime, ByteBuf in, ISerializer innerSerializer) {
+			return new EmulatedConnectionAcceptMessage(seqN, from, to, sentTime);
 		}
 	};
 
@@ -23,7 +23,7 @@ public class EmulatedConnectionAcceptMessage extends EmulatedMessage {
 		super(from, to, Type.CONN_ACCEPT);
 	}
 
-	protected EmulatedConnectionAcceptMessage(int seqN, Host from, Host to) {
-		super(seqN, from, to, Type.CONN_ACCEPT);
+	protected EmulatedConnectionAcceptMessage(int seqN, Host from, Host to, long sentTime) {
+		super(seqN, from, to, sentTime, Type.CONN_ACCEPT);
 	}
 }

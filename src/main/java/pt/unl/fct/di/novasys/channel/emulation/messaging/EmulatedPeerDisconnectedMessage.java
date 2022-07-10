@@ -17,19 +17,19 @@ public class EmulatedPeerDisconnectedMessage extends EmulatedMessage {
 		}
 
 		@Override
-		public EmulatedPeerDisconnectedMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) {
+		public EmulatedPeerDisconnectedMessage deserialize(int seqN, Host from, Host to, long sentTime, ByteBuf in, ISerializer innerSerializer) {
 			int size = in.readInt();
 			byte[] strBytes = new byte[size];
 			in.readBytes(strBytes);
 			String message = new String(strBytes);
 
-			return new EmulatedPeerDisconnectedMessage(from, to, new IOException(message));
+			return new EmulatedPeerDisconnectedMessage(from, to, sentTime, new IOException(message));
 		}
 	};
 	private final Throwable cause;
 
-	public EmulatedPeerDisconnectedMessage(Host from, Host to, Throwable cause) {
-		super(from, to, Type.PEER_DISCONNECTED);
+	public EmulatedPeerDisconnectedMessage(Host from, Host to, long sentTime, Throwable cause) {
+		super(-1, from, to, sentTime, Type.PEER_DISCONNECTED);
 		this.cause = cause;
 	}
 

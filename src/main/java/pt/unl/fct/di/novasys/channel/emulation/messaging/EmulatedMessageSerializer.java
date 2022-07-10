@@ -18,9 +18,10 @@ public class EmulatedMessageSerializer<T> implements ISerializer<EmulatedMessage
 	@Override
 	public void serialize(EmulatedMessage emulatedMessage, ByteBuf out) throws IOException {
 		out.writeInt(emulatedMessage.getType().opCode);
-		out.writeInt(emulatedMessage.seqN);
-		Host.serializer.serialize(emulatedMessage.from, out);
-		Host.serializer.serialize(emulatedMessage.to, out);
+		out.writeInt(emulatedMessage.getSeqN());
+		Host.serializer.serialize(emulatedMessage.getFrom(), out);
+		Host.serializer.serialize(emulatedMessage.getTo(), out);
+		out.writeLong(emulatedMessage.getSentTime());
 		emulatedMessage.getType().serializer.serialize(emulatedMessage, out, innerSerializer);
 		//logger.debug("Serialized {} message {} to {} from {}", emulatedMessage.getType().name(), emulatedMessage.getSeqN(), emulatedMessage.getTo(), emulatedMessage.getFrom());
 	}
@@ -31,7 +32,8 @@ public class EmulatedMessageSerializer<T> implements ISerializer<EmulatedMessage
 		int seqN = in.readInt();
 		Host from = Host.serializer.deserialize(in);
 		Host to = Host.serializer.deserialize(in);
-		EmulatedMessage emulatedMessage = type.serializer.deserialize(seqN, from, to, in, innerSerializer);
+		long sentTime = in.readLong();
+		EmulatedMessage emulatedMessage = type.serializer.deserialize(seqN, from, to, sentTime, in, innerSerializer);
 		//logger.debug("Deserialized {} message {} to {} from {}", emulatedMessage.getType().name(), emulatedMessage.getSeqN(), emulatedMessage.getTo(), emulatedMessage.getFrom());
 		return emulatedMessage;
 	}

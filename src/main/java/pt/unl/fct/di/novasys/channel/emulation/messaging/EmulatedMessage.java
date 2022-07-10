@@ -9,20 +9,26 @@ import java.io.IOException;
 public abstract class EmulatedMessage {
 
 	private static int seqNInc = 0;
-	protected final Host from;
-	protected final Host to;
-	protected final int seqN;
+	private final Host from;
+	private final Host to;
+	private final int seqN;
 	private final Type type;
+	private final long sentTime;
 
 	protected EmulatedMessage(Host from, Host to, Type type) {
 		this(seqNInc++, from, to, type);
 	}
 
 	protected EmulatedMessage(int seqN, Host from, Host to, Type type) {
+		this(seqN, from, to, System.currentTimeMillis(), type);
+	}
+
+	protected EmulatedMessage(int seqN, Host from, Host to, long sentTime, Type type) {
 		this.type = type;
 		this.from = from;
 		this.to = to;
 		this.seqN = seqN;
+		this.sentTime = sentTime;
 	}
 
 	public Type getType() {
@@ -39,6 +45,10 @@ public abstract class EmulatedMessage {
 
 	public int getSeqN() {
 		return seqN;
+	}
+
+	public long getSentTime() {
+		return sentTime;
 	}
 
 	@Override
@@ -92,6 +102,6 @@ public abstract class EmulatedMessage {
 	public interface IEmulatedSerializer<T extends EmulatedMessage> {
 		void serialize(T msg, ByteBuf out, ISerializer innerSerializer) throws IOException;
 
-		T deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) throws IOException;
+		T deserialize(int seqN, Host from, Host to, long sentTime, ByteBuf in, ISerializer innerSerializer) throws IOException;
 	}
 }

@@ -17,24 +17,19 @@ public class EmulatedConnectionFailMessage extends EmulatedMessage {
 		}
 
 		@Override
-		public EmulatedConnectionFailMessage deserialize(int seqN, Host from, Host to, ByteBuf in, ISerializer innerSerializer) {
+		public EmulatedConnectionFailMessage deserialize(int seqN, Host from, Host to, long sentTime, ByteBuf in, ISerializer innerSerializer) {
 			int size = in.readInt();
 			byte[] strBytes = new byte[size];
 			in.readBytes(strBytes);
 			String message = new String(strBytes);
 
-			return new EmulatedConnectionFailMessage(seqN, from, to, new IOException(message));
+			return new EmulatedConnectionFailMessage(seqN, from, to, sentTime, new IOException(message));
 		}
 	};
 	private final Throwable cause;
 
-	public EmulatedConnectionFailMessage(Host from, Host to, Throwable cause) {
-		super(from, to, Type.CONN_FAIL);
-		this.cause = cause;
-	}
-
-	protected EmulatedConnectionFailMessage(int seqN, Host from, Host to, Throwable cause) {
-		super(seqN, from, to, Type.CONN_FAIL);
+	protected EmulatedConnectionFailMessage(int seqN, Host from, Host to, long sentTime, Throwable cause) {
+		super(seqN, from, to, sentTime, Type.CONN_FAIL);
 		this.cause = cause;
 	}
 
