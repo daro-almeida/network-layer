@@ -13,7 +13,7 @@ public abstract class EmulatedMessage {
 	private final Host to;
 	private final int seqN;
 	private final Type type;
-	private final long sentTime;
+	private long sentTime;
 
 	protected EmulatedMessage(Host from, Host to, Type type) {
 		this(seqNInc++, from, to, type);
@@ -49,6 +49,10 @@ public abstract class EmulatedMessage {
 
 	public long getSentTime() {
 		return sentTime;
+	}
+
+	public void setSentTime(long newSentTime) {
+		sentTime = newSentTime;
 	}
 
 	@Override

@@ -117,9 +117,7 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 		if (conState == null) {
 			logger.trace(self + ": onOpenConnection creating connection to: " + peer);
 			outConnections.put(peer, new VirtualConnectionState<>());
-
 			sendMessage(peer, new EmulatedConnectionOpenMessage(self, peer));
-
 		} else
 			logger.trace(self + ": onOpenConnection ignored: " + peer);
 	}
@@ -149,7 +147,11 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 		if (connection <= CONNECTION_OUT) {
 			VirtualConnectionState<EmulatedMessage> conState = outConnections.get(peer);
 			if (conState != null) {
-				sendWithListener(appMsg, peer);
+				if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
+					conState.getQueue().add(appMsg);
+				} else if (conState.getState() == VirtualConnectionState.State.CONNECTED) {
+					sendWithListener(appMsg, peer);
+				}
 			} else
 				listener.messageFailed(msg, peer, new IllegalArgumentException("No outgoing connection"));
 		} else if (connection == CONNECTION_IN) {
@@ -318,8 +320,11 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 			logger.trace(self + ": got ACCEPT in CONNECTED state: " + self + "-" + peer);
 		} else if (conState.getState() == VirtualConnectionState.State.CONNECTING) {
 			conState.setState(VirtualConnectionState.State.CONNECTED);
-			//conState.getQueue().forEach(m -> sendWithListener((EmulatedAppMessage<T>) m, m.getTo()));
-			//conState.getQueue().clear();
+			conState.getQueue().forEach(m -> {
+				m.setSentTime(System.currentTimeMillis());
+				sendWithListener((EmulatedAppMessage<T>) m, m.getTo());
+			});
+			conState.getQueue().clear();
 
 			listener.deliverEvent(new OutConnectionUp(peer));
 		}
