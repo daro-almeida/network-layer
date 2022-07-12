@@ -303,7 +303,8 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 	private void virtualOnInboundConnectionDown(Host peer, Throwable cause) {
 		boolean hasConnection = inConnections.contains(peer);
 		if (!hasConnection)
-			throw new AssertionError(self + ": No connections in InboundConnectionDown " + peer);
+			logger.error(self + ": No connection in InboundConnectionDown " + peer);
+			//throw new AssertionError(self + ": No connections in InboundConnectionDown " + peer);
 
 		logger.trace(self + ": InboundConnectionDown " + peer + (cause != null ? (" " + cause) : ""));
 		inConnections.remove(peer);
