@@ -207,7 +207,7 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 			sendMessage(peer, new EmulatedConnectionCloseMessage(self, peer, new IOException("Connection closed by " + self)));
 			listener.deliverEvent(new OutConnectionDown(peer, new IOException("Connection closed.")));
 		} else
-			logger.warn("CloseMessage: No outgoing connection to {}", peer);
+			logger.trace("CloseMessage: No outgoing connection to {}", peer);
 	}
 
 	@Override
