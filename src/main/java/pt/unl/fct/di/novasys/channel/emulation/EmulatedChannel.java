@@ -153,14 +153,18 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 //					sendWithListener(appMsg, peer);
 //				}
 				sendWithListener(appMsg, peer);
-			} else
-				listener.messageFailed(msg, peer, new IllegalArgumentException("No outgoing connection"));
+			} else {
+				logger.warn("SendMessage: No outgoing connection to {}", peer);
+				listener.messageFailed(msg, peer, new IllegalArgumentException("SendMessage: No outgoing connection to " + peer));
+			}
 		} else if (connection == CONNECTION_IN) {
 			boolean hasConnection = inConnections.contains(peer);
 			if (hasConnection)
 				sendWithListener(appMsg, peer);
-			else
-				listener.messageFailed(msg, peer, new IllegalArgumentException("No incoming connection"));
+			else {
+				logger.warn("SendMessage: No incoming connection to {}", peer);
+				listener.messageFailed(msg, peer, new IllegalArgumentException("SendMessage: No incoming connection to " + peer));
+			}
 		} else {
 			listener.messageFailed(msg, peer, new IllegalArgumentException("Invalid connection: " + connection));
 			logger.error(self + ": Invalid sendMessage mode " + connection);
@@ -203,7 +207,7 @@ public class EmulatedChannel<T> implements OutConnListener<EmulatedMessage>, Mes
 			sendMessage(peer, new EmulatedConnectionCloseMessage(self, peer, new IOException("Connection closed by " + self)));
 			listener.deliverEvent(new OutConnectionDown(peer, new IOException("Connection closed.")));
 		} else
-			logger.warn(self + ": No outgoing connection");
+			logger.warn("CloseMessage: No outgoing connection tp {}", peer);
 	}
 
 	@Override
